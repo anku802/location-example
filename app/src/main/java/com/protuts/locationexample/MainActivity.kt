@@ -33,19 +33,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
         lifecycleScope.launch {
             Coordinates.location.collectLatest {
 
             }
         }
 
-        Coordinates.configureLocationRequest(
-            LocationConfig(
-                isBackgroundLocation = false,
-                isPreciseLocation = true,
-                showForegroundService = false
-            )
-        ).startLocationUpdates(this)
+        lifecycleScope.launch {
+            Coordinates.configureLocationRequest(
+                LocationConfig(
+                    isBackgroundLocation = false,
+                    isPreciseLocation = true,
+                    showForegroundService = false
+                )
+            ).startLocationUpdates(this@MainActivity)
+        }
     }
 
     override fun onDestroy() {

@@ -30,7 +30,7 @@ class LocationActivity : AppCompatActivity() {
         locationPermissionRequest.launch(config.listOfPermissions)
     }
 
-    val locationPermissionRequest = registerForActivityResult(
+    private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val permissionResult = permissions.checkIfPermissionsGranted(this)
@@ -54,4 +54,13 @@ class LocationActivity : AppCompatActivity() {
         }
         finish()
     }
+
+    private val resolutionForResult =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { activityResult ->
+            if (activityResult.resultCode == RESULT_OK)
+            //startLocationUpdates() or do whatever you want
+            else {
+//                showMessage("we can't determine your location")
+            }
+        }
 }
