@@ -1,16 +1,17 @@
 package com.protuts.location
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.protuts.location.LocationPermissionConstants.LOCATION_PERMISSION_RESULT
-import com.protuts.location.LocationPermissionConstants.LOCATION_PERMISSION_RESULT_CODE
+import androidx.lifecycle.lifecycleScope
+import com.protuts.location.Coordinates.permissionResult
 import com.protuts.location.utils.checkIfPermissionsGranted
 import com.protuts.location.utils.getParcelableCompact
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class LocationActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,10 +44,14 @@ class LocationActivity : AppCompatActivity() {
         )
     }
 
-    private fun postResult(granted: LocationPermissionResult) {
-        setResult(LOCATION_PERMISSION_RESULT_CODE, Intent().apply {
-            putExtra(LOCATION_PERMISSION_RESULT, granted.ordinal)
-        })
+    private fun postResult(result: LocationPermissionResult) {
+        lifecycleScope.launch {
+            if (result == LocationPermissionResult.GRANTED) {
+                permissionResult.update {
+                    true
+                }
+            }
+        }
         finish()
     }
 }

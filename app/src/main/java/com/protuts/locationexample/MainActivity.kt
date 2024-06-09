@@ -11,7 +11,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.lifecycleScope
+import com.protuts.location.Coordinates
+import com.protuts.location.LocationConfig
+import com.protuts.location.configureLocationRequest
 import com.protuts.locationexample.ui.theme.LocationExampleTheme
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,6 +33,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        lifecycleScope.launch {
+            Coordinates.location.collectLatest {
+
+            }
+        }
+
+        Coordinates.configureLocationRequest(
+            LocationConfig(
+                isBackgroundLocation = false,
+                isPreciseLocation = true,
+                showForegroundService = false
+            )
+        ).startLocationUpdates(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
     }
 }
 

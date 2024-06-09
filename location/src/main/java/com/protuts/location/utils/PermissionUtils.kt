@@ -1,6 +1,9 @@
 package com.protuts.location.utils
 
+import android.content.Context
+import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.protuts.location.PermissionResponseModel
 
@@ -35,4 +38,12 @@ fun Map<String, Boolean>.checkIfPermissionsGranted(activity: FragmentActivity): 
         permissionsDeniedPermanently = permissionsDeniedPermanently
     )
 
+}
+
+fun Array<String>.arePermissionsGranted(context: Context): Boolean {
+    this.forEach {
+        if (ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED)
+            return false
+    }
+    return true
 }

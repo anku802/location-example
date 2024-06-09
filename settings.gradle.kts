@@ -19,6 +19,9 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Location Example"
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+rootProject.name = "Location_Example"
+
 include(":app")
 include(":location")
