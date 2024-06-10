@@ -12,6 +12,7 @@ import kotlinx.parcelize.Parcelize
 
 object LocationConstants {
     const val LOCATION_CONFIG = "location_config"
+    const val LOCATION_INTENT_SENDER_REQUEST = "location_intent_sender_request"
     const val INTERVAL_MS = 1000L
 }
 
@@ -23,26 +24,39 @@ data class LocationConfig(
     val showForegroundService: Boolean = false,
     val minAccuracyFilter: Float? = null
 ) : Parcelable {
-    val listOfPermissions
-        get() = arrayOf<String>().apply {
-            Manifest.permission.ACCESS_COARSE_LOCATION
-            if (isPreciseLocation)
-                Manifest.permission.ACCESS_FINE_LOCATION
-            if (isBackgroundLocation && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            }
-        }
+
+    fun getPermissionListWithoutBackground(): Array<String> {
+        val items = mutableListOf<String>()
+        items.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (isPreciseLocation) items.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        return items.toTypedArray()
+    }
+
+    val backgroundPermission get() = Manifest.permission.ACCESS_BACKGROUND_LOCATION
+
+    val shouldAskBackgroundLocation get() = isBackgroundLocation && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+    fun listOfPermissions(): Array<String> {
+        val items = mutableListOf<String>()
+        items.addAll(getPermissionListWithoutBackground())
+        if (shouldAskBackgroundLocation) items.add(
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        )
+        return items.toTypedArray()
+    }
 }
 
 fun LocationConfig.isAllPermissionsGranted(context: Context) =
-    this.listOfPermissions.arePermissionsGranted(
+    this.listOfPermissions().arePermissionsGranted(
         context
     )
 
 
-fun defaultLocationRequest() = LocationRequest.Builder(INTERVAL_MS)
-    .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-    .setMinUpdateIntervalMillis(INTERVAL_MS)
-    .setMaxUpdateDelayMillis(INTERVAL_MS)
-    .setWaitForAccurateLocation(true)
-    .build()
+fun defaultLocationRequest(isSingleRequest: Boolean = false): LocationRequest {
+    val builder = LocationRequest.Builder(INTERVAL_MS).setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+        .setMinUpdateIntervalMillis(INTERVAL_MS).setMaxUpdateDelayMillis(INTERVAL_MS)
+        .setWaitForAccurateLocation(true)
+    if (isSingleRequest)
+        builder.setMaxUpdates(1)
+    return builder.build()
+}

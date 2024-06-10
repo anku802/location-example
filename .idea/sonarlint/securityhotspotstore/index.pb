@@ -122,3 +122,11 @@ o
 ?app/src/main/java/com/protuts/locationexample/ui/theme/Theme.kt,9/2/923895e6cf3bd767a90317cdb3b3436b9e4f97e2
 m
 =app/src/main/java/com/protuts/locationexample/MainActivity.kt,7/3/7349259f645d6b44a733b7086e2bb72c2eef5f0c
+n
+>location/src/main/java/com/protuts/location/LocationManager.kt,9/b/9be9e358b127f6f2691e3d3a9abbb1655e0b808b
+z
+Jlocation/src/main/java/com/protuts/location/LocationActivityRequestType.kt,e/1/e11433163ec88a98073304e78ac57ceeef4936b4
+q
+Aapp/src/main/java/com/protuts/locationexample/ui/MainViewModel.kt,2/8/28062b18a5eea280f6d68a07be4a700fbc6d9f6e
+p
+@app/src/main/java/com/protuts/locationexample/ActionViewModel.kt,9/0/902a19907497d2fad71790be60b1793acb3063b3

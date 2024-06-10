@@ -6,6 +6,7 @@ object LocationPermissionConstants {
 }
 
 enum class LocationPermissionResult {
+    NONE,
     GRANTED,
     DENIED,
     PERMANENTLY_DENIED;
