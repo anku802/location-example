@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
 import com.protuts.location.Coordinates
 import com.protuts.location.CoordinatesResult
 import com.protuts.location.LocationConfig
@@ -27,8 +26,6 @@ import com.protuts.location.configureLocationRequest
 import com.protuts.location.defaultLocationRequest
 import com.protuts.locationexample.ui.MainViewModel
 import com.protuts.locationexample.ui.theme.LocationExampleTheme
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -46,33 +43,15 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Button(
-                            onClick = {
-                                Coordinates.configureLocationRequest(
-                                    LocationConfig(
-                                        isBackgroundLocation = true,
-                                        isPreciseLocation = true,
-                                        showForegroundService = false
-                                    )
-                                ).startLocationUpdates(this@MainActivity, lifecycleScope)
-                            }
-                        ) {
+                        Button(onClick = {
+                            startLocationUpdate(false)
+                        }) {
                             Text(text = "Start Location Updates")
                         }
 
-                        Button(
-                            modifier = Modifier.padding(top = 20.dp),
-                            onClick = {
-                                Coordinates.configureLocationRequest(
-                                    LocationConfig(
-                                        locationRequest = defaultLocationRequest(true),
-                                        isBackgroundLocation = true,
-                                        isPreciseLocation = true,
-                                        showForegroundService = false
-                                    )
-                                ).startLocationUpdates(this@MainActivity, lifecycleScope)
-                            }
-                        ) {
+                        Button(modifier = Modifier.padding(top = 20.dp), onClick = {
+                            startLocationUpdate(true)
+                        }) {
                             Text(text = "Start Single Updates")
                         }
 
@@ -82,27 +61,35 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        lifecycleScope.launch {
-            Coordinates.location.collectLatest {
-                when (it) {
-                    is CoordinatesResult.Success -> {
-                        viewModel.onLocationUpdate(location = it.location)
-                    }
+    }
 
-                    is CoordinatesResult.Failure -> {
-                        Toast.makeText(
-                            this@MainActivity, "${it.locationFailure.ordinal}", Toast.LENGTH_LONG
-                        ).show()
-                    }
+    private fun startLocationUpdate(isSingle: Boolean) {
+        Coordinates.configureLocationRequest(
+            LocationConfig(
+                locationRequest = defaultLocationRequest(isSingle),
+                isBackgroundLocation = true,
+                isPreciseLocation = true,
+                showForegroundService = false
+            )
+        ).startLocationUpdates(this@MainActivity, this) {
+            when (it) {
+                is CoordinatesResult.Success -> {
+                    viewModel.onLocationUpdate(location = it.location)
+                }
+
+                is CoordinatesResult.Failure -> {
+                    Toast.makeText(
+                        this@MainActivity, "${it.locationFailure.ordinal}", Toast.LENGTH_LONG
+                    ).show()
                 }
             }
-
         }
     }
 
+
     override fun onDestroy() {
         super.onDestroy()
-        Coordinates.stopLocationUpdates()
+        Coordinates.stopLocationUpdates(this)
     }
 }
 

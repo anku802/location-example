@@ -14,12 +14,11 @@ import com.protuts.location.LocationActivityRequestType.Companion.LOCATION_ACTIV
 import com.protuts.location.LocationConstants.LOCATION_INTENT_SENDER_REQUEST
 import com.protuts.location.utils.checkIfPermissionsGranted
 import com.protuts.location.utils.getParcelableCompact
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LocationActivity : FragmentActivity() {
 
-    lateinit var config: LocationConfig
+    private lateinit var config: LocationConfig
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,21 +63,17 @@ class LocationActivity : FragmentActivity() {
 
     private fun postPermissionResult(result: LocationPermissionResult) {
         lifecycleScope.launch {
-            permissionResult.update {
-                result
-            }
+            permissionResult.value = result
         }
         finish()
     }
 
     private val resolutionForResult =
         registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { activityResult ->
-            if (activityResult.resultCode == RESULT_OK) locationRequestState.update {
+            if (activityResult.resultCode == RESULT_OK) locationRequestState.value =
                 ResolutionResult.Success
-            }
-            else locationRequestState.update {
+            else locationRequestState.value =
                 ResolutionResult.Failure(message = "we can't determine your location")
-            }
 
             finish()
         }

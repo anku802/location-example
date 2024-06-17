@@ -4,7 +4,9 @@ import android.content.Context
 import android.location.Location
 import android.os.Looper
 import androidx.activity.result.IntentSenderRequest
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.annotation.MainThread
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.MutableLiveData
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -12,20 +14,16 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import com.protuts.location.utils.startLocationActivity
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 object Coordinates {
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
-    val permissionResult = MutableStateFlow(LocationPermissionResult.NONE)
+    val permissionResult = MutableLiveData(LocationPermissionResult.NONE)
 
-    val locationRequestState = MutableStateFlow<ResolutionResult?>(null)
+    val locationRequestState = MutableLiveData<ResolutionResult>(ResolutionResult.None)
 
-    val location = MutableStateFlow<CoordinatesResult?>(null)
+    private val location = MutableLiveData<CoordinatesResult?>(null)
 
     private var config = LocationConfig()
 
@@ -37,40 +35,43 @@ object Coordinates {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
     }
 
-    private fun initObservers(lifecycleScope: LifecycleCoroutineScope, context: Context) {
-        lifecycleScope.launch {
-            permissionResult.collectLatest {
-                if (it == LocationPermissionResult.GRANTED) {
-                    checkIfLocationRequestSettingsAreSatisfied(context)
-                } else {
-                    location.update {
-                        CoordinatesResult.Failure(LocationFailureCode.PERMISSIONS_DENIED)
-                    }
-                }
+    @MainThread
+    private fun initObservers(
+        lifecycleScope: LifecycleOwner,
+        context: Context,
+        onLocationResult: (CoordinatesResult) -> Unit
+    ) {
+        permissionResult.observe(lifecycleScope) {
+            if (it == LocationPermissionResult.GRANTED) {
+                checkIfLocationRequestSettingsAreSatisfied(context)
+            } else {
+                location.value = CoordinatesResult.Failure(LocationFailureCode.PERMISSIONS_DENIED)
             }
         }
+        locationRequestState.observe(lifecycleScope) {
+            if (it is ResolutionResult.Success) startUpdates()
+        }
 
-        lifecycleScope.launch {
-            locationRequestState.collectLatest {
-                if (it is ResolutionResult.Success)
-                    startUpdates()
-            }
+        location.observe(lifecycleScope) { result ->
+            result?.let { onLocationResult.invoke(result) }
         }
     }
 
-    fun startLocationUpdates(context: Context, lifecycleScope: LifecycleCoroutineScope) {
+    fun startLocationUpdates(
+        context: Context,
+        lifecycleScope: LifecycleOwner,
+        onLocationResult: (CoordinatesResult) -> Unit
+    ) {
         //check if all the permissions are granted
         initProviders(context)
-        initObservers(lifecycleScope, context)
+        initObservers(lifecycleScope, context, onLocationResult)
         if (config.isAllPermissionsGranted(context)) {
             permissionResult.value = LocationPermissionResult.GRANTED
         } else {
             context.startLocationActivity(
                 config = config, requestType = LocationActivityRequestType.PERMISSION
             ) {
-                location.update {
-                    CoordinatesResult.Failure(LocationFailureCode.PERMISSIONS_DENIED)
-                }
+                location.value = CoordinatesResult.Failure(LocationFailureCode.PERMISSIONS_DENIED)
             }
         }
     }
@@ -80,24 +81,23 @@ object Coordinates {
         val client = LocationServices.getSettingsClient(context)
         val task = client.checkLocationSettings(builder.build())
         task.addOnSuccessListener {
-            locationRequestState.update { ResolutionResult.Success }
+            locationRequestState.value = ResolutionResult.Success
         }
         task.addOnFailureListener { exception ->
             if (exception is ResolvableApiException) {
                 try {
                     context.startLocationActivity(
-                        config = config, requestType = LocationActivityRequestType.LOCATION_REQUEST,
+                        config = config,
+                        requestType = LocationActivityRequestType.LOCATION_REQUEST,
                         IntentSenderRequest.Builder(exception.resolution.intentSender).build()
                     ) {
-                        location.update {
+                        location.value =
                             CoordinatesResult.Failure(LocationFailureCode.LOCATION_REQUEST_FAILED)
-                        }
                     }
                 } catch (e: Exception) {
                     // Ignore the error.
-                    location.update {
+                    location.value =
                         CoordinatesResult.Failure(LocationFailureCode.LOCATION_REQUEST_FAILED)
-                    }
                 }
 
             }
@@ -108,11 +108,9 @@ object Coordinates {
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(coordinatesResult: LocationResult) {
             super.onLocationResult(coordinatesResult)
-            location.update {
-                CoordinatesResult.Success(coordinatesResult.locations.minBy {
-                    it.accuracy
-                })
-            }
+            location.value = CoordinatesResult.Success(coordinatesResult.locations.minBy {
+                it.accuracy
+            })
         }
     }
 
@@ -120,11 +118,13 @@ object Coordinates {
         fusedLocationProviderClient.requestLocationUpdates(
             config.locationRequest, locationCallback, Looper.getMainLooper()
         )
-
     }
 
-    fun stopLocationUpdates() {
+    fun stopLocationUpdates(lifecycleScope: LifecycleOwner) {
         fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+        location.removeObservers(lifecycleScope)
+        permissionResult.removeObservers(lifecycleScope)
+        locationRequestState.removeObservers(lifecycleScope)
     }
 
 }
@@ -139,6 +139,8 @@ interface CoordinatesResult {
 }
 
 interface ResolutionResult {
+
+    object None : ResolutionResult
     object Success : ResolutionResult
     data class Failure(val message: String) : ResolutionResult
 }
